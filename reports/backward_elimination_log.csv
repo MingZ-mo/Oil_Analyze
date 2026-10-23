@@ -1,0 +1,4 @@
+Vòng,Số biến,Adj R-squared,AIC,Biến có p lớn nhất,Max p-value
+1,6,0.9935,2947.32,Season_Q3_Summer,7.3688e-01
+2,5,0.9935,2945.43,Season_Q4_Autumn,4.4384e-01
+3,4,0.9936,2944.02,Season_Q2_Spring,3.6331e-02

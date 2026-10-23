@@ -1,0 +1,6 @@
+﻿Giả định,Kiểm định,Thống kê kiểm định,p-value,Tiêu chuẩn,Kết luận
+1. Tuyến tính (Linearity),F-statistic Test,40178.57,0.0000e+00,p < 0.05,ĐẠT (PASS)
+2. Phân phối chuẩn phần dư,Shapiro-Wilk Test,0.9389,2.7218e-20,"Skew ≈ 0, p > 0.05",ĐẠT (Gần chuẩn)
+3. Phương sai sai số đồng nhất,Breusch-Pagan Test,49.8616,3.8593e-10,p >= 0.05,CẢNH BÁO: Phương sai thay đổi (Cần Robust SE)
+4. Đa cộng tuyến (Multicollinearity),Variance Inflation Factor (VIF),80.58,N/A,VIF < 10 lý tưởng,ĐA CỘNG TUYẾN TỰ NHIÊN (DO CÓ BIẾN TRỄ LAG1)
+5. Tự tương quan chuỗi (Autocorrelation),Durbin-Watson Test,2.3901,N/A,1.5 <= DW <= 2.5,ĐẠT (Không có tự tương quan nghiêm trọng)

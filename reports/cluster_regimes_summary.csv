@@ -1,0 +1,6 @@
+﻿,WTI_Price,WTI_Price,WTI_Price,WTI_Price,WTI_Price,Brent_Price,Brent_Price,Brent_Price,Brent_Price,Brent_Price,Spread_Brent_WTI,Spread_Brent_WTI,Spread_Brent_WTI,Spread_Brent_WTI,Spread_Brent_WTI
+,count,mean,std,min,max,count,mean,std,min,max,count,mean,std,min,max
+Market_Regime,,,,,,,,,,,,,,,
+1. Thị Trường Giá Thấp & Ổn Định,584,68.27,5.35,55.44,78.94,584,72.22,5.29,59.93,81.18,584,3.96,1.63,-5.95,8.24
+2. Thị Trường Giá Trung Bình,564,84.59,7.33,74.36,114.07,564,89.0,7.19,79.35,114.86,564,4.41,1.98,-1.0,10.77
+3. Thị Trường Giá Cao / Cú Sốc Năng Lượng,157,103.59,8.48,85.23,120.12,157,115.65,7.95,96.92,130.84,157,10.9,3.83,3.22,16.4

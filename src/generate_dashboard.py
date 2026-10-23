@@ -1,0 +1,381 @@
+import os
+import sys
+import pandas as pd
+import numpy as np
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
+def build_dashboard():
+    print("=" * 85)
+    print("TẠO TRANG WEB DASHBOARD TỔNG HỢP TOÀN BỘ BIỂU ĐỒ HTML...")
+    print("=" * 85)
+
+    # Đọc dữ liệu thống kê mới nhất
+    df_cleaned = pd.read_csv("data/processed/oil_cleaned.csv")
+    df_clustered = pd.read_csv("data/processed/oil_clustered.csv")
+    latest_row = df_cleaned.iloc[-1]
+    
+    latest_date = str(latest_row["Date"])
+    latest_wti = float(latest_row["WTI_Price"])
+    latest_brent = float(latest_row["Brent_Price"])
+    latest_spread = float(latest_row["Spread_Brent_WTI"])
+    
+    # Đọc kết quả OLS
+    df_comp = pd.read_csv("reports/model_comparison.csv")
+    best_r2 = float(df_comp.iloc[0]["Train R2"])
+    best_mape = float(df_comp.iloc[0]["Test MAPE (%)"])
+    best_rmse = float(df_comp.iloc[0]["Test RMSE ($)"])
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Phân Tích & Dự Báo Giá Dầu Thô Brent - WTI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {{
+            --bg-body: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #1c2128;
+            --border-color: #30363d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #bc8cff;
+        }}
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }}
+        body {{
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            padding: 24px;
+            line-height: 1.5;
+        }}
+        .header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }}
+        .header h1 {{
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        .header .subtitle {{
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }}
+        .badge {{
+            padding: 6px 12px;
+            background-color: rgba(88, 166, 255, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }}
+        .kpi-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }}
+        .kpi-card {{
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: transform 0.2s, border-color 0.2s;
+        }}
+        .kpi-card:hover {{
+            transform: translateY(-2px);
+            border-color: var(--accent-blue);
+        }}
+        .kpi-title {{
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }}
+        .kpi-value {{
+            font-size: 26px;
+            font-weight: 800;
+            margin: 6px 0 2px 0;
+        }}
+        .kpi-desc {{
+            font-size: 12px;
+            color: var(--text-secondary);
+        }}
+        .nav-tabs {{
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }}
+        .nav-tab {{
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }}
+        .nav-tab:hover {{
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }}
+        .nav-tab.active {{
+            color: var(--text-primary);
+            background: #21262d;
+            border: 1px solid var(--border-color);
+        }}
+        .tab-content {{
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }}
+        .tab-content.active {{
+            display: block;
+        }}
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(6px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        .chart-container {{
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }}
+        .chart-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }}
+        .chart-title {{
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }}
+        .btn-view {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #21262d;
+            color: var(--accent-blue);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }}
+        .btn-view:hover {{
+            background: #30363d;
+        }}
+        iframe {{
+            width: 100%;
+            height: 700px;
+            border: none;
+            border-radius: 8px;
+            background: #ffffff;
+        }}
+        .grid-2 {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }}
+        .grid-2 iframe {{
+            height: 520px;
+        }}
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div>
+            <h1>DASHBOARD PHÂN TÍCH & DỰ BÁO KINH TẾ LƯỢNG DẦU THÔ (BRENT & WTI)</h1>
+            <div class="subtitle">Quy trình chuẩn 7 bước: Làm sạch dữ liệu, Phân tích chuỗi thời gian, Mô hình OLS Stepwise, Kiểm định 5 giả định & Khai phá Gom cụm K-Means</div>
+        </div>
+        <div>
+            <span class="badge">Dữ liệu FRED Cập nhật: {latest_date}</span>
+        </div>
+    </header>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-title">Giá Dầu WTI (Mỹ)</div>
+            <div class="kpi-value" style="color: var(--accent-red);">${latest_wti:.2f}</div>
+            <div class="kpi-desc">USD / Thùng giao ngay</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Giá Dầu Brent (Châu Âu)</div>
+            <div class="kpi-value" style="color: var(--accent-blue);">${latest_brent:.2f}</div>
+            <div class="kpi-desc">USD / Thùng chuẩn quốc tế</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Chênh Lệch Giá (Spread)</div>
+            <div class="kpi-value" style="color: var(--accent-green);">${latest_spread:.2f}</div>
+            <div class="kpi-desc">Brent trừ WTI</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Mô Hình OLS R² (Train)</div>
+            <div class="kpi-value" style="color: var(--accent-purple);">{best_r2 * 100:.2f}%</div>
+            <div class="kpi-desc">Phương sai được giải thích</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Sai Số Test MAPE</div>
+            <div class="kpi-value" style="color: var(--accent-orange);">{best_mape:.2f}%</div>
+            <div class="kpi-desc">RMSE: ${best_rmse:.2f}/thùng (261 ngày test)</div>
+        </div>
+    </div>
+
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('tab-overview')">1. Tổng Quan Thị Trường (Time Series & Spread)</button>
+        <button class="nav-tab" onclick="switchTab('tab-distribution')">2. Phân Phối & Tương Quan (Heatmap & Scatter)</button>
+        <button class="nav-tab" onclick="switchTab('tab-diagnostics')">3. Chẩn Đoán 5 Giả Định OLS (Diagnostics)</button>
+        <button class="nav-tab" onclick="switchTab('tab-forecast')">4. Đánh Giá & Dự Báo (Out-of-Sample Test)</button>
+        <button class="nav-tab" onclick="switchTab('tab-regimes')">5. Phân Cụm Chế Độ Thị Trường (K-Means Regimes)</button>
+    </nav>
+
+    <!-- TAB 1: TỔNG QUAN -->
+    <div id="tab-overview" class="tab-content active">
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Biểu Đồ Chuỗi Thời Gian Tương Tác: Giá Brent vs WTI & Chênh Lệch Spread (Kèm Range Slider)</span>
+                <a href="../figures/fig01_timeseries_overview.html" target="_blank" class="btn-view">Mở toàn màn hình ↗</a>
+            </div>
+            <iframe src="../figures/fig01_timeseries_overview.html"></iframe>
+        </div>
+    </div>
+
+    <!-- TAB 2: PHÂN PHỐI & TƯƠNG QUAN -->
+    <div id="tab-distribution" class="tab-content">
+        <div class="grid-2">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">Ma Trận Hệ Số Tương Quan Pearson</span>
+                    <a href="../figures/fig03_correlation_heatmap.html" target="_blank" class="btn-view">Mở ↗</a>
+                </div>
+                <iframe src="../figures/fig03_correlation_heatmap.html"></iframe>
+            </div>
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">Scatter Plot Tương Quan Tuyến Tính & Đường OLS</span>
+                    <a href="../figures/fig04_scatter_brent_wti.html" target="_blank" class="btn-view">Mở ↗</a>
+                </div>
+                <iframe src="../figures/fig04_scatter_brent_wti.html"></iframe>
+            </div>
+        </div>
+        <div class="chart-container" style="margin-top: 16px;">
+            <div class="chart-header">
+                <span class="chart-title">Phân Phối & Hàng Rào Ngoại Lai 3-Sigma (Boxplots)</span>
+                <a href="../figures/fig02_boxplots_distribution.html" target="_blank" class="btn-view">Mở ↗</a>
+            </div>
+            <iframe src="../figures/fig02_boxplots_distribution.html" style="height: 520px;"></iframe>
+        </div>
+    </div>
+
+    <!-- TAB 3: CHẨN ĐOÁN 5 GIẢ ĐỊNH OLS -->
+    <div id="tab-diagnostics" class="tab-content">
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Bộ 4 Biểu Đồ Chẩn Đoán 5 Giả Định Kinh Tế Lượng OLS (Linearity, Homoscedasticity, Normality, Autocorrelation)</span>
+                <a href="../figures/fig05_assumption_diagnostics.html" target="_blank" class="btn-view">Mở toàn màn hình ↗</a>
+            </div>
+            <iframe src="../figures/fig05_assumption_diagnostics.html" style="height: 820px;"></iframe>
+        </div>
+    </div>
+
+    <!-- TAB 4: ĐÁNH GIÁ DỰ BÁO -->
+    <div id="tab-forecast" class="tab-content">
+        <div class="chart-container">
+            <div class="chart-header">
+                <span class="chart-title">Đánh Giá Dự Báo Trên Tập Test 261 Ngày: Giá Thực Tế vs Dự Báo & Biên Độ Sai Số Hàng Ngày</span>
+                <a href="../figures/fig06_forecast_evaluation.html" target="_blank" class="btn-view">Mở toàn màn hình ↗</a>
+            </div>
+            <iframe src="../figures/fig06_forecast_evaluation.html" style="height: 780px;"></iframe>
+        </div>
+    </div>
+
+    <!-- TAB 5: GOM CỤM CHẾ ĐỘ THỊ TRƯỜNG -->
+    <div id="tab-regimes" class="tab-content">
+        <div class="grid-2">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">Khảo Sát Số Cụm K Tối Ưu (Elbow Curve & Silhouette Score)</span>
+                    <a href="../figures/fig07_elbow_silhouette.html" target="_blank" class="btn-view">Mở ↗</a>
+                </div>
+                <iframe src="../figures/fig07_elbow_silhouette.html"></iframe>
+            </div>
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">Phân Bổ Chế Độ Thị Trường Theo Dòng Thời Gian & Không Gian Đặc Trưng</span>
+                    <a href="../figures/fig08_market_regimes_clustering.html" target="_blank" class="btn-view">Mở ↗</a>
+                </div>
+                <iframe src="../figures/fig08_market_regimes_clustering.html"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {{
+            document.querySelectorAll('.tab-content').forEach(tab => {{
+                tab.classList.remove('active');
+            }});
+            document.querySelectorAll('.nav-tab').forEach(btn => {{
+                btn.classList.remove('active');
+            }});
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }}
+    </script>
+</body>
+</html>
+"""
+
+    os.makedirs("reports", exist_ok=True)
+    report_path = os.path.join("reports", "oil_analysis_dashboard.html")
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+    # Cũng xuất ra index.html ở thư mục gốc để mở ngay lập tức cực kỳ tiện lợi
+    index_path = "index.html"
+    index_content = html_content.replace("../figures/", "figures/")
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(index_content)
+
+    print(f"- Đã tạo thành công Master Dashboard HTML: {report_path}")
+    print(f"- Đã tạo trang chủ xem trực tiếp: {index_path}")
+    print("=" * 85)
+
+if __name__ == "__main__":
+    build_dashboard()
